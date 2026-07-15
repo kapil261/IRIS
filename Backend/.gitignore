@@ -3,4 +3,4 @@ node_modules
 uploads
 config/custom_instructions.json
 package-lock.json
-documents
+.documents
