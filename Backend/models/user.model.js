@@ -1,29 +1,38 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: true 
+  name: {
+    type: String,
+    required: true
   },
-  email: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    index: true 
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
   },
-  passwordHash: { 
-    type: String, 
-    required: true 
+  // Absent for accounts that only ever signed in with Google
+  passwordHash: {
+    type: String
   },
-  role: { 
-    type: String, 
-    enum: ["user", "admin"], 
-    default: "user" 
+  // Google account id ("sub" claim); set once the user signs in with Google
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
   },
-  plan: { 
-    type: String, 
-    enum: ["free", "pro"], 
-    default: "free" 
+  avatarUrl: {
+    type: String
+  },
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user"
+  },
+  plan: {
+    type: String,
+    enum: ["free", "pro"],
+    default: "free"
   }
 }, { timestamps: true });
 

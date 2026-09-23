@@ -1,0 +1,305 @@
+/* ─────────────────────────────────────────────────────────────
+   Shared feedback UI: error banner, spinners, skeletons, and small
+   additions for the Redux-driven components (status dot, roadmap bar).
+   ───────────────────────────────────────────────────────────── */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* Error banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 0.85rem;
+  animation: fadeInMessage 0.2s ease;
+
+  .error-banner-icon {
+    flex-shrink: 0;
+  }
+
+  .error-banner-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .error-banner-close {
+    display: inline-flex;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0.1rem;
+    border-radius: 0.25rem;
+
+    &:hover {
+      opacity: 1;
+      background-color: rgba(239, 68, 68, 0.15);
+    }
+  }
+
+  &.compact {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+}
+
+.chat-error-banner {
+  max-width: 720px;
+  margin: 0 auto 1rem;
+}
+
+[data-theme="light"] .error-banner {
+  color: #b91c1c;
+}
+
+/* Spinner */
+.spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spinner-ring {
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #dd4200;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinner-label {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.spinner-fullscreen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-main, #1e1e1f);
+}
+
+/* Skeletons */
+%skeleton-block {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-list {
+  padding-top: 0.5rem;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 1rem;
+
+  &.user {
+    flex-direction: row-reverse;
+
+    .skeleton-lines {
+      align-items: flex-end;
+    }
+  }
+
+  .skeleton-avatar {
+    @extend %skeleton-block;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .skeleton-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-line {
+    @extend %skeleton-block;
+    height: 0.9rem;
+    border-radius: 0.4rem;
+  }
+}
+
+.thread-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0 0.25rem;
+
+  .thread-skeleton {
+    @extend %skeleton-block;
+    height: 2.1rem;
+    border-radius: 0.5rem;
+  }
+}
+
+[data-theme="light"] {
+  .skeleton-avatar,
+  .skeleton-line,
+  .thread-skeleton {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 25%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.04) 75%);
+    background-size: 800px 100%;
+  }
+}
+
+/* Suggestion cards are real buttons now (keyboard accessible) */
+.welcome-screen .suggestions-grid button.suggestion-card {
+  font: inherit;
+  color: inherit;
+  width: 100%;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+/* Header status dot while a reply is streaming */
+.nav-bar .status-indicator .dot.busy {
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+
+.ai-mode-selector .mode-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Mentor roadmap: progress bar + completion banner */
+.mentor-roadmap-panel {
+  .roadmap-progress-bar {
+    height: 4px;
+    margin: 0 1.25rem;
+    margin-top: 0.75rem;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+  }
+
+  .roadmap-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #6366f1, #10b981);
+    transition: width 0.4s ease;
+  }
+
+  .roadmap-complete-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.75rem 1.25rem 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #34d399;
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .group-completed-icon {
+    margin-left: auto;
+    color: #10b981;
+  }
+}
+
+.mentor-actions .mentor-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Knowledge base is emphasised while in Docs mode */
+.docs-panel-highlight .document-panel {
+  border-top-color: rgba(16, 185, 129, 0.35);
+
+  .panel-title {
+    color: #34d399;
+  }
+}
+
+/* A mode with a reply still streaming in the background */
+.ai-mode-selector .mode-btn {
+  position: relative;
+
+  .mode-busy-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+    animation: pulseGlow 1.2s ease-in-out infinite;
+  }
+}
+
+/* Mentor: Code Reviewer result per roadmap file */
+.mentor-roadmap-panel .roadmap-file-item {
+  .file-path {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .review-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-shrink: 0;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.05rem 0.3rem;
+    border-radius: 999px;
+
+    &.passed {
+      color: #34d399;
+      background-color: rgba(16, 185, 129, 0.12);
+    }
+
+    &.fixed {
+      color: #fbbf24;
+      background-color: rgba(245, 158, 11, 0.14);
+    }
+
+    &.issues {
+      color: #f87171;
+      background-color: rgba(239, 68, 68, 0.12);
+    }
+  }
+}
+
+/* Mentor action buttons with icons */
+.mentor-actions {
+  flex-wrap: wrap;
+
+  .mentor-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .review-btn {
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #34d399;
+  }
+}

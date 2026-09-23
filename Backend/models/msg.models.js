@@ -22,7 +22,13 @@ const message = new mongoose.Schema({
         type: String,
         required:true
     },
+    agent: {
+        type: String,
+        enum: ["chat", "doc", "mentor"]
+    },
     sources: [{
+        index: { type: Number },
+        page: { type: Number },
         documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
         chunkText: { type: String },
         filename: { type: String },

@@ -1,0 +1,36 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "iris-backend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "Backend/server.js"
+      ],
+      "env": {
+        "PORT": "3001"
+      },
+      "port": 3001,
+      "autoPort": false
+    },
+    {
+      "name": "iris-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5176",
+        "--strictPort"
+      ],
+      "env": {
+        "VITE_API_URL": "http://localhost:3001/api"
+      },
+      "port": 5176,
+      "autoPort": false
+    }
+  ]
+}

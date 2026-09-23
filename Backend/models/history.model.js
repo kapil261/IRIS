@@ -16,7 +16,18 @@ const ChatsSchema= new mongoose.Schema({
         type:String,
         default:"New Chat",
     },
+    // Multi-agent support: chat | doc | project | mentor
+    agent:{
+        type: String,
+        enum: ["chat", "doc", "project", "mentor"],
+        default: "chat",
+        index: true
+    },
     useDocuments:{
+        type: Boolean,
+        default: false
+    },
+    mentorMode:{
         type: Boolean,
         default: false
     },

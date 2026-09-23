@@ -1,86 +1,60 @@
-const fs = require('fs');
 const Document = require('../models/document.model');
-const Chunk = require('../models/chunk.model');
-const { extractText, chunkText, generateEmbedding } = require('../services/rag.service');
+const { ingestDocument, deleteDocumentVectors } = require('../services/rag.service');
+const { storage } = require('../services/storage.service');
 
 const uploadDocument = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  const fileType = req.file.originalname.endsWith('.pdf') ? 'pdf' : 'txt';
-  
-  // 1. Create Document record as 'processing'
+  const fileType = req.file.originalname.toLowerCase().endsWith('.pdf') ? 'pdf' : 'txt';
+  const storageKey = storage.keyFor(req.file.path);
+
   const newDoc = new Document({
     userId: req.user.id,
     filename: req.file.originalname,
     fileType,
+    size: req.file.size,
+    storageKey,
     status: 'processing',
     chunkCount: 0
   });
 
   try {
     await newDoc.save();
-    
-    // Return early to client
-    res.status(202).json({
-      message: 'File uploaded successfully. Processing in background...',
-      document: newDoc
-    });
-
-    // 2. Asynchronously process document in background
-    setTimeout(async () => {
-      const filePath = req.file.path;
-      try {
-        // Extract text
-        const text = await extractText(filePath, fileType);
-        
-        // Chunk text
-        const textChunks = chunkText(text, 300, 50);
-        
-        // Generate embeddings and save chunks
-        let successfulChunks = 0;
-        for (const chunkTextContent of textChunks) {
-          try {
-            const vector = await generateEmbedding(chunkTextContent);
-            const chunkRecord = new Chunk({
-              documentId: newDoc._id,
-              userId: req.user.id,
-              text: chunkTextContent,
-              embedding: vector
-            });
-            await chunkRecord.save();
-            successfulChunks++;
-          } catch (embedError) {
-            console.error(`Skipping chunk due to embedding failure:`, embedError.message);
-          }
-        }
-
-        // Update Document status to ready
-        newDoc.status = successfulChunks > 0 ? 'ready' : 'failed';
-        newDoc.chunkCount = successfulChunks;
-        await newDoc.save();
-
-      } catch (procErr) {
-        console.error(`Error processing document ${newDoc._id}:`, procErr);
-        newDoc.status = 'failed';
-        await newDoc.save();
-      } finally {
-        // Clean up physical file from uploads folder
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      }
-    }, 0);
-
   } catch (err) {
-    // Cleanup physical file on immediate error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    await storage.remove(storageKey).catch(() => {});
     console.error("Document upload initialization error:", err);
-    res.status(500).json({ message: 'Server error starting file process', error: err.message });
+    return res.status(500).json({ message: 'Server error starting file process', error: err.message });
   }
+
+  // Reply immediately; chunking + embedding + Pinecone upsert run in the background and the
+  // client polls GET /api/documents for the status to flip to ready/failed.
+  res.status(202).json({
+    message: 'File uploaded successfully. Processing in background...',
+    document: newDoc
+  });
+
+  setImmediate(async () => {
+    try {
+      const chunkCount = await ingestDocument({
+        filePath: storage.localPath(storageKey),
+        fileType,
+        documentId: newDoc._id,
+        userId: req.user.id,
+        filename: req.file.originalname
+      });
+      newDoc.status = 'ready';
+      newDoc.chunkCount = chunkCount;
+      newDoc.errorMessage = undefined;
+    } catch (procErr) {
+      console.error(`Error processing document ${newDoc._id}:`, procErr);
+      newDoc.status = 'failed';
+      newDoc.errorMessage = procErr.message || 'Processing failed';
+    }
+    // The original file is kept (not deleted) so it can be re-indexed or downloaded later.
+    await newDoc.save().catch((err) => console.error(`Could not save status for ${newDoc._id}:`, err));
+  });
 };
 
 const getDocuments = async (req, res) => {
@@ -95,15 +69,14 @@ const getDocuments = async (req, res) => {
 
 const deleteDocument = async (req, res) => {
   try {
-    const docId = req.params.id;
-    const document = await Document.findOneAndDelete({ _id: docId, userId: req.user.id });
-    
+    const document = await Document.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!document) {
       return res.status(404).json({ message: 'Document not found or unauthorized' });
     }
 
-    // Delete chunks associated with document
-    await Chunk.deleteMany({ documentId: docId, userId: req.user.id });
+    // Remove its vectors from Pinecone and the original file from storage.
+    await deleteDocumentVectors({ userId: req.user.id, documentId: document._id, chunkCount: document.chunkCount });
+    await storage.remove(document.storageKey).catch((err) => console.error('Could not remove stored file:', err));
 
     res.status(200).json({ message: 'Document and its vectors deleted successfully', document });
   } catch (err) {
